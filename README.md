@@ -12,3 +12,6 @@ animator or model checker on them:
 - LibraryASTD.P: the library case study, with global state
 - PortScanAttackASTD_v3.P: a case study from a scientific article about extended ASTDs
   (needs a data file in with an attack log)
+  
+All these files use the main interpreter which is in the file
+- ASTD_Global_Int.pl
