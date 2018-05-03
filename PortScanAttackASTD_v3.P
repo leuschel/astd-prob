@@ -1,0 +1,177 @@
+
+astd_sync_style(c).
+:- ensure_loaded('ASTD_Global_Int').
+% currently works for B-Style updates, but C should also work
+
+% Encoding of new ASTD of Remote Access Trojan (v2 without choice operators on packets)
+
+
+% SPECIFIC PART:
+% --------------
+
+% initial start configurations for ProB XTL mode:
+
+%start(state(aut(portscan_seq('10.10.8.136',80)),[count/0,recon_end/0,thres/1,warnings/[]])).
+start(state(afork(aut(file_reader(FILE)),
+                  seq(['|||'(repl(var(ipdst),ips,
+                           '|||'(repl(var(portdst),port,aut(portscan_seq(var(ipdst),var(portdst))))))),
+                       '|||'(repl(var(ipsrc),ips,
+                                  '|||'(repl(var(ipdst),ips,aut(exploit_seq(var(ipsrc),var(ipdst)))))
+                                  ))
+                       ])   
+                 ),
+   [file_reader_pos/0,file_reader_terms/[],
+     recon_end/0,thres/THRES,warnings/[]])) :-
+     argv_set_argument(2,FILE,
+                    '/Users/leuschel/git_root/EXTERNAL/iFM2018/prob/data/port_scan_exploit.log'),
+     argv_set_argument(1,THRES,1).
+     
+
+prob_pragma_string('ASSERT_LTL','G not(e(return))').
+prob_pragma_string('ASSERT_LTL2','G not( e(return) & e(lend))').
+prob_pragma_string('ASSERT_LTL2','G not( e(return.b1) & e(lend.b1))').
+prob_pragma_string('ASSERT_LTL3','G not(e(return.b1))').
+%prob_pragma_string('ASSERT_LTL4','G not(e(return(b1)))'). % not like this
+prob_pragma_string('ASSERT_LTL5','G not( e(lend.b1.?))').
+prob_pragma_string('ASSERT_LTL6','G not( e(return.b1) & e(lend.b2))').
+prob_pragma_string('ASSERT_LTL7','SEF => G F(e(unregister))').
+prob_pragma_string('ASSERT_LTL8','SEF => G F(e(lend.b1.m1))').
+prob_pragma_string('ASSERT_LTL8','SEF => G F(e(lend.b1.m4))').
+prob_pragma_string('ASSERT_LTL100','G not({limit_reached})').
+prob_pragma_string('ASSERT_LTL200','F ({unsafe})'). % do we always detect a port scan attack ?
+
+% data types
+data_type_value(natural,I) :- when(nonvar(I),(I>=0)).
+data_type_value(strings1,M) :- member(M,[ip1,ip2,ip3]).
+data_type_value(strings2,M) :- member(M,[12036589,74856232,41250235,61250237,35036589,12533654,72533658]).
+data_type_value(strings,M) :- data_type_value(ips,M).
+
+data_type_value(packets3,rec([addr_src/I1,port_src/P1,addr_dst/I2,port_dst/P2,tcp_flags/F,payload/P])) :-
+   data_type_value(port,P1),
+   data_type_value(port,P2),
+   data_type_value(ips,I1),
+   data_type_value(ips,I2),
+   data_type_value(tcpflag,F),
+   data_type_value(payload,P).
+data_type_value(port3,P) :- member(P,[13,22,53,80,81]).
+data_type_value(port4,P) :-  member(P,[62796,63052]).
+data_type_value(port,P) :- member(P,[2,4,6,10,12,14,26,27,28,31,33,34,39,40,41,44,45,46,47,48,
+  52,54,55,58,59,60,63,64,66,69,71,73,74,75,76,78,82,83,84,85,86,90,92,93,99,
+  103,108,109,112,117,118,121,122,124,126,128,129,130,132,133,134,136,140,141,144,146,147,148,149,
+  151,152,153,155,156,157,159,165,166,168,169,170,171,176,180,182,184,185,186,188,190,191,193,195,197,198,
+  205,208,212,214,216,218,219,220,222,223,224,225,226,227,228,229,230,231,232,234,235,236,238,239,242,243,247,248,
+     250,252,254,4444,62796,63052,
+     'acr-nema','at-rtmp',auth,bgp,bootps,'cmip-agent',discard,domain,
+     finger,ftp,'ftp-data',gopher,http,https,imap2,irc,kerberos,'loc-srv',mailq,
+     'netbios-ssn',netstat,nextstep,pop3,qmtp,'re-mail-ck',rtelnet,sftp,smtp,smux,
+     snmp,'snmp-trap',ssh,sunrpc,systat,'tacacs-ds',telnet,time,whois]).
+data_type_value(ip,I) :- member(I,[ip1,ip2,ip3,ip4,ip5,ip6,ip7]).
+data_type_value(tcpflag,F) :- member(F,['S','A','RA','P']).
+data_type_value(payload,P) :- member(P,[335]).
+data_type_value(packets,rec([addr_src/I1,port_src/P1,addr_dst/I2,port_dst/P2,tcp_flags/F,payload/P])) :-
+   data_type_value(any,P1),
+   data_type_value(any,P2),
+   data_type_value(any,I1),
+   data_type_value(any,I2),
+   data_type_value(any,F),
+   data_type_value(any,P).
+data_type_value(number,N) :- when(nonvar(N),number(N)).
+data_type_value(any,_).
+data_type_value(ips,I) :- member(I,['10.10.8.136','10.10.8',
+                                    '192.168.1', '192.168.1.129','192.168.1.1']).
+
+%e3(12533654,80,61250237,80,S,623453)
+%e4(61250237,80,12533654,80,SA,12105623453)
+%e3(12533654,80,72533658,80,S,335530)
+%e4(72533658,80,12533654,80,SA,23145236001)
+
+automata_trans(portscan_seq(IPDST,PORTDST),S1,G1,Trans,S2,G2) :- aut_portscan_seq(S1,G1,Trans,S2,G2,IPDST,PORTDST).
+automata_trans(file_reader(FILE),S1,G1,Trans,S2,G2) :- aut_file_reader(S1,G1,Trans,S2,G2,FILE).
+automata_trans(exploit_seq(IPSRC,IPDST),S1,G1,Trans,S2,G2) :- aut_exploit(S1,G1,Trans,S2,G2,IPSRC,IPDST).
+
+
+% specifying initial states
+initial_automata_state(portscan_seq(_,_),0).
+initial_automata_state(exploit_seq(_,_),3).
+initial_automata_state(file_reader(_),0).
+
+
+% final states
+final_automata_state(portscan_seq(_,_),_).
+final_automata_state(exploit_seq(_,_),5).
+final_automata_state(file_reader(_),2).
+
+
+% portscan attack case study
+
+
+aut_portscan_seq(0,G1,e(X1),1,G2,IPDST,PORTDST) :-
+     data_type_value(packets,X1),
+     test_pred('='('->'(X1,addr_dst),IPDST),G1),
+     test_pred('='('->'(X1,port_dst),PORTDST),G1),
+     test_pred('='('->'(X1,tcp_flags),'S'),G1),
+     test_pred('='('$'(recon_end),0),G1),
+     execute(skip,G1,G2), %print(detected_port(X1,G2)),nl,
+     debug_println(19,adding_port(IPDST,PORTDST,X1)).
+
+aut_portscan_seq(1,G1,e(X2),2,G3,IPDST,PORTDST) :-
+     data_type_value(packets,X2),
+     test_pred('='('->'(X2,addr_src),IPDST),G1),
+     test_pred('='('->'(X2,port_src),PORTDST),G1),
+     test_pred('='('->'(X2,tcp_flags),'RA'),G1),
+     %test_pred('='('$'(recon_end),0),G1),
+     execute(iinc(count(IPDST)),G1,Updates1), % added IPDST as arg to count to mimic local variable
+     apply_updates(G1,Updates1,G2),
+     debug_println(19,detecting_ack(IPDST,PORTDST,X2)),
+     %print(test_count(IPDST,PORTDST,G2)),nl,
+     if(test_pred('='('$'(count(IPDST)),'$'(thres)),G2),  % TO DO: add if to language; this test does not depend on parameter or channel input, so ok
+         (member(file_reader_pos/Pos,G1),format('~n*** PORT SCAN ATTACK ~w : ~w ***~n Detected after ~w messages~n~n',[IPDST,PORTDST,Pos]),
+         
+          execute(';'(';'(':='(recon_end,1),skip),
+                      add(warnings,'PORT scan attack')),G2,G3) %, print(up(G3)),nl
+          ),
+          G3=Updates1).
+
+% second automata from Fig.1 Remote Access Trojan
+aut_exploit(3,G1,e(X1),4,G2,IPSRC,IPDST) :-
+     test_pred('='('$'(recon_end),1),G1), %print(try_exploit(IPSRC,IPDST,X1)),nl,
+     data_type_value(packets,X1),
+     %test_pred('<'('$'(thres),'$'(count)),G1), % GUARD OF SEQUENCE; nothing forces move to second automata
+     test_pred('='('->'(X1,addr_dst),IPDST),G1),
+     test_pred('='('->'(X1,addr_src),IPSRC),G1),
+     test_pred('='('->'(X1,tcp_flags),'S'),G1),
+     execute_skip(G1,G2),
+     %print(exploit_seq(IPDST,IPSRC,X1)),nl,
+     debug_println(19,exploit_seq(IPSRC,IPDST,X1)).
+
+aut_exploit(4,G1,e(X2),5,G2,IPSRC,IPDST) :-
+     data_type_value(packets,X2),
+     test_pred('='('->'(X2,addr_dst),IPDST),G1),
+     test_pred('='('->'(X2,addr_src),IPSRC),G1),
+     test_pred('='('->'(X2,tcp_flags),'SA'),G1),
+     test_pred(contains('->'(X2,payload),'std_api'),G1),
+     % TO DO: match payload
+     execute(add(warnings,'Metaexploit PRIVILEGE ESCALATION'),G1,G2),
+     member(file_reader_pos/Pos,G1),
+     format('~n*** Metaexploit PRIVILEGE ESCALATION ~w : ~w ***~n Detected after ~w messages~n~n',[IPSRC,IPDST,Pos]).
+
+% file reader automata, reading File and outputting terms in event e(.) one by one
+aut_file_reader(0,G,open_file(File),1,NewState,File) :-
+   read_terms(File,Terms),
+   execute(';'(':='(file_reader_pos,1),
+               ':='(file_reader_terms,Terms)),G,NewState).
+aut_file_reader(1,G,e(Term),1,NewState,_) :-
+   lookup(file_reader_pos,G,P),
+   lookup(file_reader_terms,G,Terms),
+   P1 is P+1,
+   nth1(P,Terms,Term),
+   execute_individual_update(G,file_reader_pos,P1,NewState).
+aut_file_reader(1,G,close_file(File),2,NewState,File) :-
+   lookup(file_reader_pos,G,P),
+   lookup(file_reader_terms,G,Terms),
+   length(Terms,L), L<P,
+   execute(';'(':='(file_reader_pos,0),':='(file_reader_terms,[])),G,NewState).
+
+
+        
+

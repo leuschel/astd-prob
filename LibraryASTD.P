@@ -1,0 +1,78 @@
+
+% library case study
+% devloped for B-Style updates (otherwise nbloans incremented by 2)
+
+astd_sync_style(b).
+:- ensure_loaded('ASTD_Global_Int').
+
+start(state('||'([lend,return,renew],[
+           '|||'(BOOKS),
+           '|||'(MEMBERS)
+                      ]),[nbloans/0])) :- 
+                             expand_repl(repl(var(bb),books,kleene(aut(book(var(bb)),0))), BOOKS),
+                             expand_repl(repl(var(mm),members,kleene(aut(member(var(mm)),0))), MEMBERS).
+
+
+
+prob_pragma_string('ASSERT_LTL','G not(e(return))').
+prob_pragma_string('ASSERT_LTL2','G not( e(return) & e(lend))').
+prob_pragma_string('ASSERT_LTL2','G not( e(return.b1) & e(lend.b1))').
+prob_pragma_string('ASSERT_LTL3','G not(e(return.b1))').
+%prob_pragma_string('ASSERT_LTL4','G not(e(return(b1)))'). % not like this
+prob_pragma_string('ASSERT_LTL5','G not( e(lend.b1.?))').
+prob_pragma_string('ASSERT_LTL6','G not( e(return.b1) & e(lend.b2))').
+prob_pragma_string('ASSERT_LTL7','SEF => G F(e(unregister))').
+prob_pragma_string('ASSERT_LTL8','SEF => G F(e(lend.b1.m1))').
+prob_pragma_string('ASSERT_LTL8','SEF => G F(e(lend.b1.m4))').
+prob_pragma_string('ASSERT_LTL100','G not({limit_reached})').
+prob_pragma_string('ASSERT_LTL200','F ({unsafe})'). % do we always detect a port scan attack ?
+
+% data types
+data_type_value(books,B) :- member(B,[b1,b2,b3]).
+%data_type_value(books,B) :- member(B,[b1]).
+data_type_value(members,M) :- member(M,[m1,m2,m3]).
+
+
+
+automata_trans(loan(B,M),S1,G1,Trans,S2,G2) :- aut_loan(S1,G1,Trans,S2,G2,B,M).
+automata_trans(book(B),S1,G1,Trans,S2,G2) :- aut_book(S1,G1,Trans,S2,G2,B).
+automata_trans(member(M),S1,G1,Trans,S2,G2) :- aut_member(S1,G1,Trans,S2,G2,M).
+
+% specifying initial states
+
+initial_automata_state(loan(_,_),0).
+initial_automata_state(member(_),0).
+initial_automata_state(book(_),0).
+
+
+
+% final states
+final_automata_state(loan(_,_),2).
+final_automata_state(book(_),2).
+final_automata_state(member(_),2).
+
+
+
+% automata transitions:
+
+aut_loan(0,G1,lend(Bld,Mld),1,G2,Bld,Mld) :- test_pred('<'('$'(nbloans),3),G1),execute(inc(nbloans),G1,G2).
+aut_loan(1,G1,renew(Bld),1,G2,Bld,_Mld) :- execute_skip(G1,G2).
+aut_loan(1,G1,return(Bld),2,G2,Bld,_Mld) :- execute_skip(G1,G2).
+
+%aut_book(0,acquire(Bld),compound(1,kleene('|'(repl(var(mld),members,aut(loan(Bld,var(mld))))))),Bld).
+aut_book(0,G1,acquire(Bld),compound(1,kleene('|'(Loans))),G2,Bld) :-
+   %expand_repl(repl(var(mld),members,aut(loan(Bld,var(mld)))) , Loans).
+    % inline replications to reduce state space
+   findall(aut(loan(Bld,MLD)), data_type_value(members,MLD) , Loans),
+   execute_skip(G1,G2).
+aut_book(compound(1,S),discard(Bld),2,Bld) :- is_final_astd(S).
+
+%%aut_member(0,register(Mld),compound(1,'|||'(repl(var(bld),books,kleene(aut(loan(var(bld),Mld)))))),Mld).
+aut_member(0,G1,register(Mld),compound(1,'|||'(Loans)),G2,Mld) :-
+   %expand_repl(repl(var(bld),books,kleene(aut(loan(var(bld),Mld)))) , Loans). % inline replications to reduce state space
+   findall(kleene(aut(loan(BLD,Mld))), data_type_value(books,BLD) , Loans),
+   execute_skip(G1,G2).
+aut_member(compound(1,S),G1,unregister(Mld),2,G2,Mld) :- is_final_astd(S),
+   execute_skip(G1,G2).
+
+

@@ -1,2 +1,14 @@
 # astd-prob
 ASTD Interpreter for the ProB model checker
+
+This project contains a Prolog interpreter for extended
+ASTDs (Algebraic State Transition Diagrams).
+The interpreter can be used stand-alone or loaded by ProB,
+conforming to the XTL format (https://www3.hhu.de/stups/prob/index.php/Other_languages).
+
+You can load the files ending with .P directly in ProB to run the ProB
+animator or model checker on them:
+- SimpleASTD.P: a very simple ASTD, without global state
+- LibraryASTD.P: the library case study, with global state
+- PortScanAttackASTD_v3.P: a case study from a scientific article about extended ASTDs
+  (needs a data file in with an attack log)

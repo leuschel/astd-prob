@@ -1,0 +1,14 @@
+machine('/Users/leuschel/git_root/EXTERNAL/iFM2018/prob/LibraryASTD.P').
+start_xtl_system.
+acquire(b1).
+register(m1).
+lend(b1,m1).
+acquire(b2).
+register(m3).
+lend(b2,m1).
+return(b2).
+lend(b2,m3).
+return(b2).
+return(b1).
+unregister(m1).
+unregister(m3).

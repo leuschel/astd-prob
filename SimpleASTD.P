@@ -1,0 +1,92 @@
+
+astd_sync_style(b).
+:- ensure_loaded('ASTD_Global_Int').
+
+% SPECIFIC PART:
+% --------------
+
+% initial start configurations for ProB XTL mode:
+
+%start(state(aut(a),[])).
+%start(aut(b)).
+%start(aut(c)).
+%start(seq([aut(a,1),aut(b,5)])).
+%start(aut(icounter(2))).
+%start(aut(counter(2))).
+%start('|||'([aut(counter(1)),aut(counter(2))])).
+start(state(kleene(seq([aut(a,1),aut(b,5)])),[])).
+start(state('|'(repl(var(x),[1,2,3],aut(counter(var(x))))),[])).
+start(state(aut(a1(2)),[])).
+start(state('||'([e2],[aut(a),aut(b)]),[])).
+
+% LTL Properties:
+
+prob_pragma_string('ASSERT_LTL200','F ({unsafe})'). % do we always detect a port scan attack ?
+
+% data types
+
+data_type_value(number,N) :- when(nonvar(N),number(N)).
+data_type_value(any,_).
+
+
+
+% specifying initial states
+initial_automata_state(a,1).
+initial_automata_state(b,5).
+initial_automata_state(c,'|'([aut(a,1),aut(b,5)])).
+initial_automata_state(counter(K),compound(c1,aut(icounter(K)))).
+initial_automata_state(icounter(_K),q0).
+initial_automata_state(a1(_K),0).
+initial_automata_state(a1_inner,5).
+
+
+% final states
+final_automata_state(a,4).
+final_automata_state(b,8).
+final_automata_state(a1,3).
+final_automata_state(a1_inner,7).
+
+
+% Automata transitions:
+
+automata_trans(A,S1,G1,Trans,S2,G1) :- 
+    automata_trans(A,S1,Trans,S2), execute_skip(G1,G2).
+
+automata_trans(a,S1,Trans,S2) :- aut_a(S1,Trans,S2).
+automata_trans(b,S1,Trans,S2) :- aut_b(S1,Trans,S2).
+automata_trans(counter(K),S1,Trans,S2) :- aut_counter(S1,Trans,S2,K).
+automata_trans(icounter(K),S1,Trans,S2) :- aut_icounter(S1,Trans,S2,K).
+automata_trans(a1(X),S1,Trans,S2) :- aut_a1(S1,Trans,S2,X).
+automata_trans(a1_inner,S1,Trans,S2) :- aut_a1_inner(S1,Trans,S2).
+
+% Automata a transitions from Figure 5
+aut_a(1,e1,2).
+aut_a(1,e2,3).
+aut_a(2,e4,4).
+aut_a(3,e5,4).
+
+% Automata b transitions from Figure 5
+aut_b(5,e2,6).
+aut_b(5,e3,7).
+aut_b(6,e6,8).
+aut_b(7,e7,8).
+
+% counter from Figure 6 of WSTS paper
+aut_counter(_,reset(K),compound(c1,aut(icounter(K))),K). % we may have to add a state name for the outer aut
+aut_icounter(q0,inc(K),q1,K).
+aut_icounter(q1,dec(K),q0,K).
+
+% a1(x:int) from Figure 1 of astd.pdf
+aut_a1(0,e1(X),compound(4,aut(a1_inner)),X).
+aut_a1(0,e9(X),1,X) :- X>1.
+aut_a1(1,e10,2,_).
+aut_a1(1,e6,compound(4,aut(a1_inner,6)),_).
+aut_a1(2,e7,compound(4,aut(a1_inner,h)),_). % TO DO:  implement history state
+aut_a1(compound(4,aut(a1_inner,6)),e5,2,_).
+aut_a1(compound(4,_),e8,1,_).
+aut_a1(compound(4,S),e4,3,_) :- is_final_astd(S). % transition marked with •
+
+aut_a1_inner(5,e2,6).
+aut_a1_inner(6,e3,7).
+
+

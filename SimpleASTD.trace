@@ -1,0 +1,7 @@
+machine('/Users/leuschel/git_root/EXTERNAL/iFM2018/prob/SimpleASTD.P').
+start_xtl_system.
+reset(1).
+inc(1).
+dec(1).
+reset(1).
+reset(1).
