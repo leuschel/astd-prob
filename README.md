@@ -6,6 +6,11 @@ ASTDs (Algebraic State Transition Diagrams).
 The interpreter can be used stand-alone or loaded by ProB,
 conforming to the XTL format (https://www3.hhu.de/stups/prob/index.php/Other_languages).
 
+This project accompanies the paper
+- Extended Algebraic State-Transition Diagrams
+by
+- Lionel N. Tidjon, Marc Frappier, Michael Leuschel and Amel Mammar
+
 You can load the files ending with .P directly in ProB to run the ProB
 animator or model checker on them:
 - SimpleASTD.P: a very simple ASTD, without global state
